@@ -241,7 +241,7 @@
   function generateElements(worstCase = false) {
     $("start").disabled = false;
     let size = $("selector").value;
-    delay = size > 100 ? 0 : 250 - 0.025 * Math.pow(size, 2);
+    delay = size > 100 ? 0 : -2.5 * (size - 10) + 250;
     let elementWidth = $("canvas").width.baseVal.value / size;
     elements = [];
     while($("canvas").firstChild) {
