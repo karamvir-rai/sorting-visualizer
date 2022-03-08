@@ -2,6 +2,14 @@
 (function() {
   const SVG_NS = "http://www.w3.org/2000/svg";
   const MAXIMUM_VALUE = 250;
+  const COLOR = {
+    SWAP: "swap",
+    CURRENT: "current",
+    MINIMUM: "minimum",
+    MIDPOINT: "midpoint",
+    PIVOT: "pivot",
+    SUCCESS: "success"
+  };
 
   let elements;
   let delay;
@@ -16,7 +24,7 @@
     $("selector").onmouseup = function() {
       $("size").textContent = "";
     }
-    $("shuffle").onclick = function() { generateElements(); }
+    $("new").onclick = function() { generateElements(); }
     $("start").onclick = async function() {
       let menu = $("algorithm");
       toggleControls();
@@ -39,12 +47,15 @@
         case "Heap Sort":
           await heapSort();
           break;
+        case "Bogo Sort":
+          await bogoSort();
+          break;
       }
       toggleControls();
       $("start").disabled = true;
     }
     document.addEventListener('keydown', function(e) {
-      if (e.key === 'w' && !$("shuffle").disabled) {
+      if (e.key === 'w' && !$("new").disabled) {
         generateElements(true);
       }
     })
@@ -53,15 +64,15 @@
   async function bubbleSort() {
     for (let i = 0; i < elements.length; i++) {
       for (let j = 0; j < (elements.length - i - 1); j++) {
-        elements[j].rect.classList.add("current");
-        elements[j + 1].rect.classList.add("current");
+        elements[j].rect.setColor(COLOR.CURRENT);
+        elements[j + 1].rect.setColor(COLOR.CURRENT);
         if (elements[j].value > elements[j + 1].value) {
           await swap(j, j + 1);
         } else {
           await sleep(delay);
         }
-        elements[j].rect.classList.remove("current");
-        elements[j + 1].rect.classList.remove("current");
+        elements[j].rect.removeColor(COLOR.CURRENT);
+        elements[j + 1].rect.removeColor(COLOR.CURRENT);
       }
     }
   }
@@ -69,20 +80,20 @@
   async function selectionSort() {
     for (let i = 0; i < elements.length; i++) {
       let minIndex = i;
-      elements[minIndex].rect.classList.add("minimum");
+      elements[minIndex].rect.setColor(COLOR.MINIMUM);
       await sleep(delay);
       for (let j = i + 1; j < elements.length; j++) {
-        elements[j].rect.classList.add("current");
+        elements[j].rect.setColor(COLOR.CURRENT);
         if (elements[j].value < elements[minIndex].value) {
-          elements[minIndex].rect.classList.remove("minimum");
-          elements[j].rect.classList.add("minimum");
+          elements[minIndex].rect.removeColor(COLOR.MINIMUM);
+          elements[j].rect.setColor(COLOR.MINIMUM);
           minIndex = j;
         } else {
           await sleep(delay);
         }
-        elements[j].rect.classList.remove("current");
+        elements[j].rect.removeColor(COLOR.CURRENT);
       }
-      elements[minIndex].rect.classList.remove("minimum");
+      elements[minIndex].rect.removeColor(COLOR.MINIMUM);
       if (i != minIndex) {
         await swap(i, minIndex);
       }
@@ -92,16 +103,16 @@
   async function insertionSort() {
     for (let i = 1; i < elements.length; i++) {
       let j = i;
-      elements[i].rect.classList.add("current");
+      elements[i].rect.setColor(COLOR.CURRENT);
       await sleep(delay);
       while (j > 0 && elements[j].value < elements[j - 1].value) {
         await swap(j, j - 1);
         if (j == i) {
-          elements[i].rect.classList.add("current");
+          elements[i].rect.setColor(COLOR.CURRENT);
         }
         j--;
       }
-      elements[i].rect.classList.remove("current");
+      elements[i].rect.removeColor(COLOR.CURRENT);
     }
   }
 
@@ -121,15 +132,15 @@
       let pointerA = low;
       let pointerB = pointerA + gap;
       while (pointerB <= high) {
-        elements[pointerA].rect.classList.add("current");
-        elements[pointerB].rect.classList.add("current");
+        elements[pointerA].rect.setColor(COLOR.CURRENT);
+        elements[pointerB].rect.setColor(COLOR.CURRENT);
         if (elements[pointerB].value < elements[pointerA].value) {
           await swap(pointerA, pointerB);
         } else {
           await sleep(delay);
         }
-        elements[pointerA].rect.classList.remove("current");
-        elements[pointerB].rect.classList.remove("current");
+        elements[pointerA].rect.removeColor(COLOR.CURRENT);
+        elements[pointerB].rect.removeColor(COLOR.CURRENT);
 
         pointerA++;
         pointerB++;
@@ -181,7 +192,7 @@
   async function partition(low, high) {
     let pivotIndex = parseInt((low + high) / 2);
     let pivotValue = elements[pivotIndex].value;
-    elements[pivotIndex].rect.classList.add("pivot");
+    elements[pivotIndex].rect.setColor(COLOR.PIVOT);
     await sleep(delay);
 
     let pointerA = low;
@@ -197,26 +208,71 @@
       if (pointerA <= pointerB) {
         if (pointerA != pointerB) {
           await swap(pointerA, pointerB);
-          elements[pivotIndex].rect.classList.add("pivot");
+          elements[pivotIndex].rect.setColor(COLOR.PIVOT);
         }
         pointerA++;
         pointerB--;
       }
     }
     await sleep(delay);
-    elements[pivotIndex].rect.classList.remove("pivot");
+    elements[pivotIndex].rect.removeColor(COLOR.PIVOT);
     return pointerA;
   }
 
-  async function swap(a, b) {
-    await sleep(delay);
-    elements[a].rect.classList.remove(...elements[a].rect.classList);
-    elements[b].rect.classList.remove(...elements[b].rect.classList);
+  async function bogoSort() {
+    let response;
+    let sortedElements = [...elements].sort((a, b) => (a.value > b.value ? 1 : -1));
+    let sortedSequenceRecord = 0;
+    do {
+      shuffle();
+      response = await isSorted(sortedElements);
+      if (response.streak > sortedSequenceRecord) {
+        let timestamp = (new Date()).toLocaleString([], { hour12: true });
+        let percentSorted = (100 * response.streak / elements.length).toFixed(2) + "%";
+        sortedSequenceRecord = response.streak;
+        console.log("Bogosort Record: " + sortedSequenceRecord + "/" + elements.length +
+                    " - " + percentSorted + " (" + timestamp + ")");
+      }
+      await sleep(10);
+    } while(!response.sorted);
+    console.log("Wow, very impressive!");
+  }
 
-    elements[a].rect.classList.add("swap");
-    elements[b].rect.classList.add("swap");
+  // Fisher–Yates shuffle
+  function shuffle() {
+    for (let i = elements.length - 1; i > 0; i--) {
+      let j = Math.floor(Math.random() * (i + 1));
+      swap(i, j, false);
+    }
+  }
 
-    await sleep(delay);
+  async function isSorted(sortedElements) {
+    if (sortedElements.length != elements.length) {
+      return { sorted: false, streak: 0 };
+    }
+    for (let i = 0; i < sortedElements.length; i++) {
+      if (sortedElements[i].value != elements[i].value) {
+        elements.clearColors();
+        return { sorted: false, streak: i };
+      }
+      elements[i].rect.setColor(COLOR.SUCCESS);
+      await sleep(20 * Math.log(i + 1));
+    }
+    elements.clearColors();
+    return { sorted: true, streak: sortedElements.length };
+  }
+
+  async function swap(a, b, animate = true) {
+    if (animate) {
+      await sleep(delay);
+      elements[a].rect.clearClassAttributes();
+      elements[b].rect.clearClassAttributes();
+
+      elements[a].rect.setColor(COLOR.SWAP);
+      elements[b].rect.setColor(COLOR.SWAP);
+
+      await sleep(delay);
+    }
 
     let xPositionTemp = elements[a].rect.x.baseVal.value;
     elements[a].rect.setAttribute("x", elements[b].rect.x.baseVal.value);
@@ -226,22 +282,24 @@
     elements[a] = elements[b];
     elements[b] = elementTemp;
 
-    await sleep(delay);
-    elements[a].rect.classList.remove("swap");
-    elements[b].rect.classList.remove("swap");
+    if (animate) {
+      await sleep(delay);
+      elements[a].rect.removeColor(COLOR.SWAP);
+      elements[b].rect.removeColor(COLOR.SWAP);
+    }
   }
 
   function toggleControls() {
     $("algorithm").disabled = !$("algorithm").disabled;
     $("selector").disabled = !$("selector").disabled;
     $("start").disabled = !$("start").disabled;
-    $("shuffle").disabled = !$("shuffle").disabled;
+    $("new").disabled = !$("new").disabled;
   }
 
   function generateElements(worstCase = false) {
     $("start").disabled = false;
     let size = $("selector").value;
-    delay = size > 100 ? 0 : -2.5 * (size - 10) + 250;
+    delay = size > 50 ? 0 : -5 * (size - 10) + 250;
     let elementWidth = $("canvas").width.baseVal.value / size;
     elements = [];
     while($("canvas").firstChild) {
@@ -274,6 +332,21 @@
     svgRect.setAttribute("height", "100%");
     svgRect.setAttribute("fill", "white");
     svgRect.setAttribute("stroke", "black");
+    svgRect.setColor = function(cssClass) {
+      this.classList.add(cssClass);
+    }
+    svgRect.removeColor = function(cssClass) {
+      this.classList.remove(cssClass);
+    }
+    svgRect.clearClassAttributes = function() {
+      this.classList.remove(...this.classList);
+    }
+
+    elements.clearColors = function() {
+      elements.forEach((element) => {
+        element.rect.clearClassAttributes();
+      });
+    }
 
     element.rect = svgRect;
     element.value = value;
