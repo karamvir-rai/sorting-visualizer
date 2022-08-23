@@ -6,4 +6,4 @@ Currently, this project supports seven sorting algorithms to choose from.\
 Also, if you press the `W` key, the array will be presented in reverse sorted order which is the worst-case for most of these algorithms.\
 For Bogosort, feel free to also open up the developer console of your browser and watch :)
 
-You can access the live version of this project by clicking here [here!](https://karamvir-rai.github.io/sorting-visualizer/)
+You can access the live version of this project by clicking here [here!](https://karamvirr.github.io/sorting-visualizer/)
